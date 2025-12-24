@@ -4,6 +4,23 @@ from urllib.parse import urlparse
 from nicegui import app, ui, background_tasks
 from openai import OpenAI
 from dotenv import load_dotenv
+import time, threading, signal, os
+
+# --- WATCHDOG CONFIGURATION ---
+last_heartbeat = time.time()
+SHUTDOWN_THRESHOLD = 30  # Wait 30s before killing the server
+
+def watchdog_monitor():
+    """Background thread that kills the process if no heartbeat is detected."""
+    global last_heartbeat
+    while True:
+        time.sleep(5)
+        if time.time() - last_heartbeat > SHUTDOWN_THRESHOLD:
+            print(f"⚠️ Watchdog: No browser activity detected. Shutting down...")
+            os.kill(os.getpid(), signal.SIGTERM)
+
+# Start the watchdog thread
+threading.Thread(target=watchdog_monitor, daemon=True).start()
 
 # --- CONFIGURATION ---
 load_dotenv(dotenv_path="env.txt")
@@ -19,6 +36,15 @@ class MagicRundownApp:
         self.active_category = 'general' 
         self.migrate_db() 
         self.render_ui()
+        
+        # This tells the browser to keep Python alive every 5 seconds
+        ui.timer(5.0, self.pulse)
+
+    # Make sure this is indented exactly the same as def __init__
+    def pulse(self):
+        """Updates the global heartbeat timestamp."""
+        global last_heartbeat
+        last_heartbeat = time.time()
 
     def migrate_db(self):
         conn = sqlite3.connect(self.db_path)
@@ -160,5 +186,8 @@ class MagicRundownApp:
             with ui.column().classes('w-3/5 p-12 bg-white h-full overflow-y-auto'):
                 self.detail_pane = ui.column().classes('w-full')
 
+# Create the app instance
 app_instance = MagicRundownApp()
-ui.run(title="Magic 96.7 Rundown", port=8083, reload=False)
+
+# host='127.0.0.1' ensures the studio computer is the only one that can see this
+ui.run(title="Magic 96.7 Rundown", host='127.0.0.1', port=8083, reload=False, show=True)
