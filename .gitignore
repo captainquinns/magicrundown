@@ -1,0 +1,18 @@
+# Security: NEVER upload API keys
+env.txt
+.env
+
+# Python specific
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Database (Local data shouldn't go to GitHub)
+*.db
+magic_rundown.db
+
+# OS specific (Mac/Windows junk files)
+.DS_Store
+Thumbs.db
+Old Versions/
